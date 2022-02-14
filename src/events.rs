@@ -23,8 +23,9 @@ pub fn register_token_pair_evt(token_pair_name: &str,
     EventBuilder::new()
         .string("registerTokenPair")
         .string(token_pair_name)
-        .address(old_owner)
-        .address(new_owner)
+        .address(oep_addr)
+        .address(erc_addr)
+        .bool(is_oep5)
         .notify();
 }
 

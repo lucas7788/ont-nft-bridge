@@ -56,12 +56,12 @@ pub fn accept_admin() -> bool {
     true
 }
 
-pub fn get_all_token_pair_name() -> Vec<Vec<u8>> {
+pub fn get_all_token_pair_name() -> Vec<String> {
     get(KEY_TOKEN_PAIR_NAME).unwrap_or_default()
 }
 
 pub fn register_oep5_erc721_pair(
-    token_pair_name: &[u8],
+    token_pair_name: &str,
     oep5_addr: &Address,
     erc721_addr: &Address,
 ) -> bool {
@@ -69,7 +69,7 @@ pub fn register_oep5_erc721_pair(
 }
 
 pub fn register_oep8_erc1155_pair(
-    token_pair_name: &[u8],
+    token_pair_name: &str,
     oep8_addr: &Address,
     erc1155_addr: &Address,
 ) -> bool {
@@ -96,7 +96,7 @@ fn register_token_pair(
     assert!(token_pair.is_none(), "token pair name has registered");
 
     let mut names = get_all_token_pair_name();
-    names.push(token_pair_name.to_vec());
+    names.push(token_pair_name.to_string());
     put(KEY_TOKEN_PAIR_NAME, names);
 
     put(
@@ -107,6 +107,7 @@ fn register_token_pair(
             oep: *oep_addr,
         },
     );
+    register_token_pair_evt(token_pair_name, oep_addr, erc_addr, is_oep5);
     true
 }
 
