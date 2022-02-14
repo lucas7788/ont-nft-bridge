@@ -165,7 +165,10 @@ pub fn oep5_to_erc721(
     let after = balance_of_oep5(&pair.oep, this);
     let delta = after - before;
     if !delta.is_zero() {
+        let before = balance_of_erc721(this, &pair.erc, eth_acct);
         mint_erc721(this, &pair.erc, eth_acct, token_id);
+        let after = balance_of_erc721(this, &pair.erc, eth_acct);
+        assert_eq!(after - before, U128::new(1), "mint failed");
     }
     oep5_to_erc721_event(ont_acct, eth_acct, token_id, &pair.oep, &pair.erc);
     true
@@ -188,7 +191,10 @@ pub fn oep8_to_erc1155(
     let after = balance_of_oep8(&pair.oep, this, token_id);
     let delta = after - before;
     if !delta.is_zero() {
+        let before = balance_of_erc1155(this, &pair.erc, eth_acct, token_id);
         mint_erc1155(this, &pair.erc, eth_acct, token_id, amount);
+        let after = balance_of_erc1155(this, &pair.erc, eth_acct, token_id);
+        assert_eq!(after - before, amount, "mint failed");
     }
     oep8_to_erc1155_event(ont_acct, eth_acct, token_id, amount, &pair.oep, &pair.erc);
     true

@@ -73,10 +73,6 @@ pub fn invoke() {
                 token_pair_name,
             ));
         }
-        "erc721ToOep5" => {
-            let (ont_acct, eth_acct, amount, token_pair_name) = source.read().unwrap();
-            sink.write(erc721_to_oep5(ont_acct, eth_acct, amount, token_pair_name));
-        }
         "oep8ToErc1155" => {
             let (ont_acct, eth_acct, token_id, amount, token_pair_name) = source.read().unwrap();
             sink.write(oep8_to_erc1155(
@@ -85,16 +81,6 @@ pub fn invoke() {
                 token_id,
                 token_pair_name,
                 amount,
-            ));
-        }
-        "erc1155ToOep8" => {
-            let (ont_acct, eth_acct, token_id, amount, token_pair_name) = source.read().unwrap();
-            sink.write(erc1155_to_oep8(
-                ont_acct,
-                eth_acct,
-                token_id,
-                amount,
-                token_pair_name,
             ));
         }
         _ => panic!("unsupported action!"),
