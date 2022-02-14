@@ -194,52 +194,6 @@ pub fn oep8_to_erc1155(
     true
 }
 
-pub fn erc721_to_oep5(
-    ont_acct: &Address,
-    eth_acct: &Address,
-    token_id: U128,
-    token_pair_name: &[u8],
-) -> bool {
-    assert!(check_witness(ont_acct));
-    let (pair, _) = get_token_pair_by_name(token_pair_name);
-    let pair: TokenPair = pair.expect("invalid token pair name");
-    let this = &address();
-    let before = balance_of_erc721(this, &pair.erc, this);
-    transfer_from_erc721(ont_acct, &pair.erc, eth_acct, this, token_id);
-    let after = balance_of_erc721(this, &pair.erc, this);
-    assert!(after >= before);
-    let delta = after - before;
-    if delta.is_zero() {
-        transfer_oep5(&pair.oep, this, ont_acct, token_id);
-    };
-    erc721_to_oep5_event(ont_acct, eth_acct, token_id, &pair.oep, &pair.erc);
-    true
-}
-
-pub fn erc1155_to_oep8(
-    ont_acct: &Address,
-    eth_acct: &Address,
-    token_id: U128,
-    amount: U128,
-    token_pair_name: &[u8],
-) -> bool {
-    assert!(check_witness(ont_acct));
-    assert!(!amount.is_zero(), "amount should be more than 0");
-    let (pair, _) = get_token_pair_by_name(token_pair_name);
-    let pair: TokenPair = pair.expect("invalid token pair name");
-    let this = &address();
-    let before = balance_of_erc1155(this, &pair.erc, this, token_id);
-    safe_transfer_from_erc1155(ont_acct, &pair.erc, eth_acct, this, token_id, amount);
-    let after = balance_of_erc1155(this, &pair.erc, this, token_id);
-    assert!(after >= before);
-    let delta = after - before;
-    if delta.is_zero() {
-        transfer_oep8(&pair.oep, this, ont_acct, token_id, delta);
-    };
-    erc1155_to_oep8_event(ont_acct, eth_acct, token_id, &pair.oep, &pair.erc);
-    true
-}
-
 fn gen_key<T: Encoder>(prefix: &[u8], post: T) -> Vec<u8> {
     let mut sink = Sink::new(64);
     sink.write(prefix);
