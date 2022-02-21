@@ -1,5 +1,5 @@
 use super::*;
-use ontio_std::contract::eth;
+use ostd::contract::eth;
 use ostd::types::U256;
 
 pub fn balance_of_erc721(caller: &Address, target: &Address, user: &Address) -> U128 {

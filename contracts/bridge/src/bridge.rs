@@ -1,16 +1,19 @@
 use crate::erc721and1155::*;
 use crate::events::*;
-use crate::oep5and8::*;
-use ontio_std::abi::{Decoder, Encoder, Sink};
-use ontio_std::database::{delete, get, put};
-use ontio_std::prelude::*;
-use ontio_std::runtime::{address, check_witness};
+use alloc::collections::BTreeMap;
+use common::oep5and8::{balance_of_oep5, balance_of_oep8, transfer_oep8, lock_oep5};
+use ostd::abi::{Decoder, Encoder, Sink};
+use ostd::database::{delete, get, put};
+use ostd::prelude::*;
+use ostd::runtime::{address, check_witness, contract_migrate};
 
 const KEY_ADMIN: &[u8] = b"1";
 const KEY_PENDING_ADMIN: &[u8] = b"2";
 const PREFIX_OEP5_ERC721_PAIR: &[u8] = b"3";
 const PREFIX_OEP8_ERC1155_PAIR: &[u8] = b"4";
 const KEY_TOKEN_PAIR_NAME: &[u8] = b"5";
+const KEY_RECEIVERS: &[u8] = b"6";
+const PREFIX_OEP8_IDS: &[u8] = b"7";
 
 #[derive(Encoder, Decoder, Default)]
 pub struct TokenPair {
@@ -18,6 +21,7 @@ pub struct TokenPair {
     owner: Address,
     erc: Address,
     oep: Address,
+    is_oep5_neovm: bool,
 }
 
 pub fn initialize(admin: &Address) -> bool {
@@ -56,6 +60,40 @@ pub fn accept_admin() -> bool {
     true
 }
 
+pub fn migrate(
+    code: &[u8],
+    vm_type: u32,
+    name: &str,
+    version: &str,
+    author: &str,
+    email: &str,
+    desc: &str,
+) -> bool {
+    check_admin();
+    let this = &address();
+    let all_token_pair_name = get_all_token_pair_name();
+    let mut oep8_id_map: BTreeMap<String, (TokenPair, Vec<U128>)> = BTreeMap::new();
+    for name in all_token_pair_name.iter() {
+        let pair = get_token_pair(name.as_bytes());
+        let oep8_ids = get_oep8_ids(&pair.oep);
+        if !oep8_ids.is_empty() {
+            oep8_id_map.insert(name.clone(), (pair, oep8_ids));
+        }
+    }
+
+    let new_addr = contract_migrate(code, vm_type, name, version, author, email, desc);
+    assert!(!new_addr.is_zero(), "migrate failed");
+    for (_, (pair, ids)) in oep8_id_map.iter() {
+        ids.iter().for_each(|&id| {
+            let oep8_balance = balance_of_oep8(&pair.oep, this, id);
+            if !oep8_balance.is_zero() {
+                transfer_oep8(&pair.oep, this, &new_addr, id, oep8_balance);
+            }
+        });
+    }
+    true
+}
+
 pub fn get_all_token_pair_name() -> Vec<String> {
     get(KEY_TOKEN_PAIR_NAME).unwrap_or_default()
 }
@@ -64,8 +102,9 @@ pub fn register_oep5_erc721_pair(
     token_pair_name: &str,
     oep5_addr: &Address,
     erc721_addr: &Address,
+    is_neovm: bool,
 ) -> bool {
-    register_token_pair(token_pair_name, oep5_addr, erc721_addr, true)
+    register_token_pair(token_pair_name, oep5_addr, erc721_addr, true, is_neovm)
 }
 
 pub fn register_oep8_erc1155_pair(
@@ -73,7 +112,7 @@ pub fn register_oep8_erc1155_pair(
     oep8_addr: &Address,
     erc1155_addr: &Address,
 ) -> bool {
-    register_token_pair(token_pair_name, oep8_addr, erc1155_addr, false)
+    register_token_pair(token_pair_name, oep8_addr, erc1155_addr, false, false)
 }
 
 fn register_token_pair(
@@ -81,6 +120,7 @@ fn register_token_pair(
     oep_addr: &Address,
     erc_addr: &Address,
     is_oep5: bool,
+    is_neovm: bool,
 ) -> bool {
     let admin = get_admin();
     assert!(check_witness(&admin), "need admin signature");
@@ -105,6 +145,7 @@ fn register_token_pair(
             owner: admin,
             erc: *erc_addr,
             oep: *oep_addr,
+            is_oep5_neovm: is_neovm,
         },
     );
     register_token_pair_evt(token_pair_name, oep_addr, erc_addr, is_oep5);
@@ -137,6 +178,10 @@ fn get_token_pair_by_name(token_name: &[u8]) -> (Option<TokenPair>, Vec<u8>) {
     }
 }
 
+pub fn get_oep5_neovm_receivers() -> Vec<Address> {
+    get(KEY_RECEIVERS).unwrap_or_default()
+}
+
 fn gen_token_pair_key_oep5(token_name: &[u8]) -> Vec<u8> {
     gen_key(PREFIX_OEP5_ERC721_PAIR, token_name)
 }
@@ -150,6 +195,32 @@ pub fn get_token_pair(token_name: &[u8]) -> TokenPair {
     pair.expect("non-exist token pair")
 }
 
+pub fn add_oep5_neovm_receiver(receivers: &[Address]) {
+    check_admin();
+    let mut addrs = get_oep5_neovm_receivers();
+    if addrs.is_empty() {
+        put(KEY_RECEIVERS, receivers);
+    } else {
+        for item in receivers.iter() {
+            if !addrs.contains(item) {
+                addrs.push(*item);
+            }
+        }
+        put(KEY_RECEIVERS, addrs);
+    }
+}
+
+pub fn del_oep5_neovm_receiver(receiver: &Address) {
+    check_admin();
+    let mut addrs = get_oep5_neovm_receivers();
+    let index = addrs
+        .iter()
+        .position(|x| x == receiver)
+        .expect("non-exist ");
+    addrs.remove(index);
+    put(KEY_RECEIVERS, addrs);
+}
+
 pub fn oep5_to_erc721(
     ont_acct: &Address,
     eth_acct: &Address,
@@ -157,12 +228,12 @@ pub fn oep5_to_erc721(
     token_pair_name: &[u8],
 ) -> bool {
     assert!(check_witness(ont_acct));
-    let (pair, _) = get_token_pair_by_name(token_pair_name);
-    let pair: TokenPair = pair.expect("amount should be more than 0");
+    let key = gen_token_pair_key_oep5(token_pair_name);
+    let pair: TokenPair = get(key.as_slice()).expect("non-existed token pair name");
     let this = &address();
-    let before = balance_of_oep5(&pair.oep, this);
-    transfer_oep5(&pair.oep, ont_acct, this, token_id);
-    let after = balance_of_oep5(&pair.oep, this);
+    let (receiver, before) = find_receiver_addr(&pair.oep, pair.is_oep5_neovm);
+    lock_oep5(&receiver, &pair.oep, token_id, pair.is_oep5_neovm);
+    let after = balance_of_oep5(&pair.oep, &receiver, pair.is_oep5_neovm);
     let delta = after - before;
     if !delta.is_zero() {
         let before = balance_of_erc721(this, &pair.erc, eth_acct);
@@ -174,6 +245,17 @@ pub fn oep5_to_erc721(
     true
 }
 
+fn find_receiver_addr(oep5: &Address, oep5_is_neovm: bool) -> (Address, U128) {
+    let receivers = get_oep5_neovm_receivers();
+    for item in receivers.iter() {
+        let before = balance_of_oep5(oep5, item, oep5_is_neovm);
+        if before < U128::new(1023) {
+            return (*item, before);
+        }
+    }
+    panic!("non-exist address")
+}
+
 pub fn oep8_to_erc1155(
     ont_acct: &Address,
     eth_acct: &Address,
@@ -183,12 +265,13 @@ pub fn oep8_to_erc1155(
 ) -> bool {
     assert!(check_witness(ont_acct));
     assert!(!amount.is_zero(), "amount should be more than 0");
-    let (pair, _) = get_token_pair_by_name(token_pair_name);
-    let pair: TokenPair = pair.expect("amount should be more than 0");
+    let key = gen_token_pair_key_oep8(token_pair_name);
+    let pair: TokenPair = get(key.as_slice()).expect("non-existed token pair name");
     let this = &address();
     let before = balance_of_oep8(&pair.oep, this, token_id);
     transfer_oep8(&pair.oep, ont_acct, this, token_id, amount);
     let after = balance_of_oep8(&pair.oep, this, token_id);
+    push_oep8_id(token_id, &pair.oep);
     let delta = after - before;
     if !delta.is_zero() {
         let before = balance_of_erc1155(this, &pair.erc, eth_acct, token_id);
@@ -198,6 +281,23 @@ pub fn oep8_to_erc1155(
     }
     oep8_to_erc1155_event(ont_acct, eth_acct, token_id, amount, &pair.oep, &pair.erc);
     true
+}
+
+fn push_oep8_id(id: U128, oep8: &Address) {
+    let mut ids = get_oep8_ids(oep8);
+    if !ids.contains(&id) {
+        ids.push(id);
+        put(gen_key(PREFIX_OEP8_IDS, oep8), ids);
+    }
+}
+
+fn get_oep8_ids(oep8: &Address) -> Vec<U128> {
+    let key = gen_key(PREFIX_OEP8_IDS, oep8);
+    get(key.as_slice()).unwrap_or_default()
+}
+
+fn check_admin() {
+    assert!(check_witness(&get_admin()), "check admin signature failed");
 }
 
 fn gen_key<T: Encoder>(prefix: &[u8], post: T) -> Vec<u8> {

@@ -8,10 +8,12 @@ use ostd::abi::{Sink, Source};
 use ostd::prelude::*;
 use ostd::runtime::{input, ret};
 
+extern crate alloc;
+extern crate common;
+
 mod bridge;
 mod erc721and1155;
 mod events;
-mod oep5and8;
 
 #[no_mangle]
 pub fn invoke() {
@@ -37,12 +39,35 @@ pub fn invoke() {
         "acceptAdmin" => {
             sink.write(accept_admin());
         }
+        "migrate" => {
+            let (code, vm_type, name, version, author, email, desc) = source.read().unwrap();
+            let vm_type: U128 = vm_type;
+            sink.write(migrate(
+                code,
+                vm_type.raw() as u32,
+                name,
+                version,
+                author,
+                email,
+                desc,
+            ));
+        }
+        "addOep5NeovmReceiver" => {
+            let receivers: Vec<Address> = source.read().unwrap();
+            sink.write(add_oep5_neovm_receiver(receivers.as_slice()))
+        }
+        "delOep5NeovmReceiver" => {
+            let receiver = source.read().unwrap();
+            sink.write(del_oep5_neovm_receiver(receiver))
+        }
+        "getOep5NeovmReceivers" => sink.write(get_oep5_neovm_receivers()),
         "registerOep5Erc721Pair" => {
-            let (token_pair_name, oep5_addr, erc721_addr) = source.read().unwrap();
+            let (token_pair_name, oep5_addr, erc721_addr, is_neovm) = source.read().unwrap();
             sink.write(register_oep5_erc721_pair(
                 token_pair_name,
                 oep5_addr,
                 erc721_addr,
+                is_neovm,
             ))
         }
         "registerOep8Erc1155Pair" => {
