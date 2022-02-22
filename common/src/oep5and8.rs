@@ -2,25 +2,13 @@ use ontio_std::abi::{Decoder, Encoder, Source, VmValueBuilder, VmValueParser};
 use ontio_std::contract::{ong, ont, wasm};
 use ontio_std::macros;
 use ontio_std::runtime;
-use ontio_std::types::{Address, U128};
+use ontio_std::types::{Address, U128, u128_from_neo_bytes};
 
 pub const ONT_CONTRACT_ADDRESS: Address = macros::base58!("AFmseVrdL9f9oyCzZefL9tG6UbvhUMqNMV");
 pub const ONG_CONTRACT_ADDRESS: Address = macros::base58!("AFmseVrdL9f9oyCzZefL9tG6UbvhfRZMHJ");
 
 pub fn balance_of_oep8(contract: &Address, account: &Address, token_id: U128) -> U128 {
-    if contract == &ONT_CONTRACT_ADDRESS {
-        return ont::balance_of(account);
-    }
-    if contract == &ONG_CONTRACT_ADDRESS {
-        return ong::balance_of(account);
-    }
-    let mut builder = VmValueBuilder::new();
-    builder.string("balanceOf");
-    let mut nested = builder.list();
-    nested.address(account);
-    nested.number(token_id);
-    nested.finish();
-    call_neovm_num(contract, builder.bytes().as_slice())
+    call_wasm_contract(contract, ("balanceOf", account, token_id))
 }
 
 pub fn balance_of_oep5(contract: &Address, account: &Address, oep5_is_neovm: bool) -> U128 {
@@ -36,7 +24,7 @@ pub fn balance_of_oep5(contract: &Address, account: &Address, oep5_is_neovm: boo
         let mut nested = builder.list();
         nested.address(account);
         nested.finish();
-        call_neovm_num(contract, builder.bytes().as_slice())
+        call_neovm_bytearray_num(contract, builder.bytes().as_slice())
     } else {
         call_wasm_contract(contract, ("balanceOf", account))
     }
@@ -103,6 +91,14 @@ pub fn call_neovm_num(address: &Address, param: &[u8]) -> U128 {
 }
 
 #[track_caller]
+pub fn call_neovm_bytearray_num(address: &Address, param: &[u8]) -> U128 {
+    let result = runtime::call_contract(address, param);
+    let mut source = VmValueParser::new(result.as_slice());
+    let data = source.bytearray().unwrap();
+    u128_from_neo_bytes(data)
+}
+
+#[track_caller]
 pub fn call_neovm_address(address: &Address, param: &[u8]) -> Address {
     let result = runtime::call_contract(address, param);
     let mut source = VmValueParser::new(result.as_slice());
@@ -111,8 +107,8 @@ pub fn call_neovm_address(address: &Address, param: &[u8]) -> Address {
 
 #[track_caller]
 pub fn call_wasm_contract<T: Encoder, R>(address: &Address, param: T) -> R
-where
-    for<'a> R: Decoder<'a>,
+    where
+            for<'a> R: Decoder<'a>,
 {
     let result = wasm::call_contract(address, param);
     let mut source = Source::new(result.as_slice());

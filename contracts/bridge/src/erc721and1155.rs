@@ -14,14 +14,11 @@ pub fn balance_of_erc721(caller: &Address, target: &Address, user: &Address) -> 
 }
 
 pub fn mint_erc721(caller: &Address, target: &Address, to: &Address, token_id: U128) {
-    let res = eth::evm_invoke(
+    eth::evm_invoke(
         caller,
         target,
         gen_erc721_mint_data(to, token_id).as_slice(),
     );
-    let mut source = Source::new(res.as_slice());
-    let r: &H256 = source.read_h256().unwrap();
-    assert!(!r.is_zero(), "mint erc721 failed");
 }
 
 pub fn mint_erc1155(
@@ -31,24 +28,23 @@ pub fn mint_erc1155(
     token_id: U128,
     amount: U128,
 ) {
-    let res = eth::evm_invoke(
+    eth::evm_invoke(
         caller,
         target,
         gen_erc1155_mint_data(to, token_id, amount).as_slice(),
     );
-    let mut source = Source::new(res.as_slice());
-    let r: &H256 = source.read_h256().unwrap();
-    assert!(!r.is_zero(), "mint erc1155 failed");
 }
 
 // const TRANSFER_ID: [u8; 4] = [0xa9, 0x05, 0x9c, 0xbb];
 // const TRANSFER_FROM_ID: [u8; 4] = [0x23, 0xb8, 0x72, 0xdd];
-const MINT_ID: [u8; 4] = [0x4e, 0x6c, 0xca, 0x8f];
-const BALANCEOF_ID: [u8; 4] = [0x70, 0xa0, 0x82, 0x31];
+const MINT_ID_ERC721: [u8; 4] = [0x40, 0xc1, 0x0f, 0x19];
+const BALANCEOF_ID_ERC721: [u8; 4] = [0x70, 0xa0, 0x82, 0x31];
+const BALANCEOF_ID_ERC1155: [u8; 4] = [0x00, 0xfd, 0xd5, 0x8e];
+const MINT_ID_ERC1155: [u8; 4] = [0x15, 0x6e, 0x29, 0xf6];
 
 fn gen_erc721_mint_data(to_acct: &Address, token_id: U128) -> Vec<u8> {
     [
-        MINT_ID.as_ref(),
+        MINT_ID_ERC721.as_ref(),
         format_addr(to_acct).as_ref(),
         format_amount(token_id).as_ref(),
     ]
@@ -57,7 +53,7 @@ fn gen_erc721_mint_data(to_acct: &Address, token_id: U128) -> Vec<u8> {
 
 fn gen_erc1155_mint_data(to_acct: &Address, token_id: U128, amount: U128) -> Vec<u8> {
     [
-        MINT_ID.as_ref(),
+        MINT_ID_ERC1155.as_ref(),
         format_addr(to_acct).as_ref(),
         format_amount(token_id).as_ref(),
         format_amount(amount).as_ref(),
@@ -66,7 +62,7 @@ fn gen_erc1155_mint_data(to_acct: &Address, token_id: U128, amount: U128) -> Vec
 }
 
 fn gen_erc721_balance_of_data(addr: &Address) -> Vec<u8> {
-    [BALANCEOF_ID.as_ref(), format_addr(addr).as_ref()].concat()
+    [BALANCEOF_ID_ERC721.as_ref(), format_addr(addr).as_ref()].concat()
 }
 
 pub fn format_addr(addr: &Address) -> [u8; 32] {
@@ -103,7 +99,7 @@ pub fn balance_of_erc1155(
 
 fn gen_erc1155_balance_of_data(user: &Address, token_id: U128) -> Vec<u8> {
     [
-        BALANCEOF_ID.as_ref(),
+        BALANCEOF_ID_ERC1155.as_ref(),
         format_addr(user).as_ref(),
         format_amount(token_id).as_ref(),
     ]

@@ -90,7 +90,7 @@ pub fn migrate(
     true
 }
 
-pub fn withdraw_oep5(contract: &Address, to: &Address, token_id: U128, oep5_is_neovm: bool) {
+pub fn withdraw_oep5(contract: &Address, to: &Address, token_id: U128, oep5_is_neovm: bool) -> bool {
     let bridge = get_nft_bridge();
     let admin = get_admin();
     assert!(
@@ -104,9 +104,10 @@ pub fn withdraw_oep5(contract: &Address, to: &Address, token_id: U128, oep5_is_n
     let owner = owner_of(contract, token_id, oep5_is_neovm);
     assert_ne!(owner, this, "transfer oep5 failed");
     del_oep5_id(token_id, contract);
+    true
 }
 
-pub fn lock_oep5(contract: &Address, token_id: U128, oep5_is_neovm: bool) {
+pub fn lock_oep5(contract: &Address, token_id: U128, oep5_is_neovm: bool) -> bool {
     let bridge = get_nft_bridge();
     let admin = get_admin();
     assert!(
@@ -117,6 +118,7 @@ pub fn lock_oep5(contract: &Address, token_id: U128, oep5_is_neovm: bool) {
     transfer_oep5(contract, &this, token_id, oep5_is_neovm);
     push_oep5_id(token_id, contract);
     push_oep5_contract(contract, oep5_is_neovm);
+    true
 }
 
 fn push_oep5_id(id: U128, oep5: &Address) {

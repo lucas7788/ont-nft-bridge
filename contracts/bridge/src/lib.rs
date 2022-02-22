@@ -4,9 +4,11 @@
 extern crate ontio_std as ostd;
 
 use crate::bridge::*;
+use common::oep5and8::balance_of_oep5;
 use ostd::abi::{Sink, Source};
 use ostd::prelude::*;
-use ostd::runtime::{input, ret};
+use ostd::runtime::{input, ret, address};
+use erc721and1155::{balance_of_erc721, mint_erc721, balance_of_erc1155, mint_erc1155};
 
 extern crate alloc;
 extern crate common;
@@ -98,6 +100,31 @@ pub fn invoke() {
                 token_pair_name,
             ));
         }
+        "mintErc721" => {
+            let (erc721, eth_acct, token_id) = source.read().unwrap();
+            sink.write(mint_erc721(
+                &address(),
+                erc721,
+                eth_acct,
+                token_id,
+            ));
+        }
+        "balanceOfOep5" => {
+            let (ont_acct, eth_acct, is_neovm) = source.read().unwrap();
+            sink.write(balance_of_oep5(ont_acct, eth_acct, is_neovm));
+        }
+        "balanceOfErc721" => {
+            let (caller, target, user) = source.read().unwrap();
+            sink.write(balance_of_erc721(caller, target, user));
+        }
+        "balanceOfErc1155" => {
+            let (caller, target, user, token_id) = source.read().unwrap();
+            sink.write(balance_of_erc1155(caller, target, user, token_id));
+        }
+        "mintErc1155" => {
+            let (caller, target, user, token_id, amount) = source.read().unwrap();
+            sink.write(mint_erc1155(caller, target, user, token_id, amount));
+        }
         "oep8ToErc1155" => {
             let (ont_acct, eth_acct, token_id, amount, token_pair_name) = source.read().unwrap();
             sink.write(oep8_to_erc1155(
@@ -108,7 +135,7 @@ pub fn invoke() {
                 amount,
             ));
         }
-        _ => panic!("unsupported action!"),
+        _ => panic!("unsupported action2!"),
     }
 
     ret(sink.bytes())
