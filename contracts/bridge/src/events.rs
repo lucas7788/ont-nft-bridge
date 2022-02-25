@@ -47,7 +47,7 @@ pub fn oep5_to_erc721_event(
     erc721_addr: &Address,
 ) {
     EventBuilder::new()
-        .string("oep5ToErc721")
+        .string("oep5ToOrc721")
         .address(ont_acct)
         .address(eth_acct)
         .number(token_id)
@@ -65,7 +65,7 @@ pub fn oep8_to_erc1155_event(
     erc1155_addr: &Address,
 ) {
     EventBuilder::new()
-        .string("oep8ToErc1155")
+        .string("oep8ToOrc1155")
         .address(ont_acct)
         .address(eth_acct)
         .number(token_id)

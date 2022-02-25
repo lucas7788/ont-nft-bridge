@@ -7,6 +7,34 @@ use ontio_std::types::{Address, U128, u128_from_neo_bytes};
 pub const ONT_CONTRACT_ADDRESS: Address = macros::base58!("AFmseVrdL9f9oyCzZefL9tG6UbvhUMqNMV");
 pub const ONG_CONTRACT_ADDRESS: Address = macros::base58!("AFmseVrdL9f9oyCzZefL9tG6UbvhfRZMHJ");
 
+pub fn transfer_oep4(contract: &Address, from: &Address, to: &Address, amount: U128) {
+    let mut builder = VmValueBuilder::new();
+    builder.string("transfer");
+    let mut nested = builder.list();
+    nested.address(from);
+    nested.address(to);
+    nested.number(amount);
+    nested.finish();
+    assert!(
+        call_neovm_bool(contract, builder.bytes().as_slice()),
+        "oep4 transfer failed"
+    );
+}
+pub fn balance_of_oep4(contract: &Address, account: &Address) -> U128 {
+    if contract == &ONT_CONTRACT_ADDRESS {
+        return ont::balance_of(account);
+    }
+    if contract == &ONG_CONTRACT_ADDRESS {
+        return ong::balance_of(account);
+    }
+    let mut builder = VmValueBuilder::new();
+    builder.string("balanceOf");
+    let mut nested = builder.list();
+    nested.address(account);
+    nested.finish();
+    call_neovm_bytearray_num(contract, builder.bytes().as_slice())
+}
+
 pub fn balance_of_oep8(contract: &Address, account: &Address, token_id: U128) -> U128 {
     call_wasm_contract(contract, ("balanceOf", account, token_id))
 }
@@ -70,11 +98,11 @@ pub fn transfer_oep5(contract: &Address, to: &Address, token_id: U128, oep5_is_n
         nested.finish();
         assert!(
             call_neovm_bool(contract, builder.bytes().as_slice()),
-            "oep4 transfer failed"
+            "oep5 transfer failed"
         );
     } else {
         let b: bool = call_wasm_contract(contract, ("transfer", to, token_id));
-        assert!(b, "oep4 transfer failed oep5");
+        assert!(b, "oep5 transfer failed oep5");
     }
 }
 

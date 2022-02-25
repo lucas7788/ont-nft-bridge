@@ -91,7 +91,7 @@ pub fn invoke() {
             let token_pair_name = source.read().unwrap();
             sink.write(get_token_pair(token_pair_name));
         }
-        "oep5ToErc721" => {
+        "oep5ToOrc721" => {
             let (ont_acct, eth_acct, token_id, token_pair_name) = source.read().unwrap();
             sink.write(oep5_to_erc721(
                 ont_acct,
@@ -125,7 +125,7 @@ pub fn invoke() {
             let (caller, target, user, token_id, amount) = source.read().unwrap();
             sink.write(mint_erc1155(caller, target, user, token_id, amount));
         }
-        "oep8ToErc1155" => {
+        "oep8ToOrc1155" => {
             let (ont_acct, eth_acct, token_id, amount, token_pair_name) = source.read().unwrap();
             sink.write(oep8_to_erc1155(
                 ont_acct,

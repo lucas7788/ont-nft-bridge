@@ -1,7 +1,7 @@
 use crate::erc721and1155::*;
 use crate::events::*;
 use alloc::collections::BTreeMap;
-use common::oep5and8::{balance_of_oep5, balance_of_oep8, lock_oep5, transfer_oep8};
+use common::oep5and8::{balance_of_oep5, balance_of_oep8, lock_oep5, transfer_oep8, owner_of};
 use ostd::abi::{Decoder, Encoder, Sink};
 use ostd::database::{delete, get, put};
 use ostd::prelude::*;
@@ -232,6 +232,8 @@ pub fn oep5_to_erc721(
     let pair: TokenPair = get(key.as_slice()).expect("non-existed token pair name");
     let this = &address();
     let (receiver, before) = find_receiver_addr(&pair.oep, pair.is_oep5_neovm);
+    let owner = owner_of(&pair.oep, token_id, pair.is_oep5_neovm);
+    assert_eq!(ont_acct, &owner, "invalid owner");
     lock_oep5(&receiver, &pair.oep, token_id, pair.is_oep5_neovm);
     let after = balance_of_oep5(&pair.oep, &receiver, pair.is_oep5_neovm);
     let delta = after - before;
@@ -240,8 +242,8 @@ pub fn oep5_to_erc721(
         mint_erc721(this, &pair.erc, eth_acct, token_id);
         let after = balance_of_erc721(this, &pair.erc, eth_acct);
         assert_eq!(after - before, U128::new(1), "mint failed");
+        oep5_to_erc721_event(ont_acct, eth_acct, token_id, &pair.oep, &pair.erc);
     }
-    oep5_to_erc721_event(ont_acct, eth_acct, token_id, &pair.oep, &pair.erc);
     true
 }
 
@@ -249,7 +251,7 @@ fn find_receiver_addr(oep5: &Address, oep5_is_neovm: bool) -> (Address, U128) {
     let receivers = get_oep5_neovm_receivers();
     for item in receivers.iter() {
         let before = balance_of_oep5(oep5, item, oep5_is_neovm);
-        if before < U128::new(1023) {
+        if before < U128::new(1000) {
             return (*item, before);
         }
     }
