@@ -1,6 +1,21 @@
-use super::*;
-use ostd::contract::eth;
-use ostd::types::U256;
+use ontio_std::abi::Source;
+use ontio_std::contract::eth;
+use ontio_std::prelude::*;
+use ontio_std::types::U256;
+
+const MINT_ID_WONT: [u8; 4] = [0x40, 0xc1, 0x0f, 0x19];
+pub fn mint_wont(caller: &Address, target: &Address, to: &Address, amount: U128) {
+    eth::evm_invoke(caller, target, gen_wont_mint_data(to, amount).as_slice());
+}
+
+fn gen_wont_mint_data(to_acct: &Address, amount: U128) -> Vec<u8> {
+    [
+        MINT_ID_WONT.as_ref(),
+        format_addr(to_acct).as_ref(),
+        format_amount(amount).as_ref(),
+    ]
+    .concat()
+}
 
 pub fn balance_of_erc721(caller: &Address, target: &Address, user: &Address) -> U128 {
     let res = eth::evm_invoke(caller, target, gen_erc721_balance_of_data(user).as_slice());

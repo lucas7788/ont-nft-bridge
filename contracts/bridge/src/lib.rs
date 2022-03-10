@@ -4,17 +4,16 @@
 extern crate ontio_std as ostd;
 
 use crate::bridge::*;
+use common::erc721and1155::{balance_of_erc1155, balance_of_erc721, mint_erc1155, mint_erc721};
 use common::oep5and8::balance_of_oep5;
 use ostd::abi::{Sink, Source};
 use ostd::prelude::*;
-use ostd::runtime::{input, ret, address};
-use erc721and1155::{balance_of_erc721, mint_erc721, balance_of_erc1155, mint_erc1155};
+use ostd::runtime::{address, input, ret};
 
 extern crate alloc;
 extern crate common;
 
 mod bridge;
-mod erc721and1155;
 mod events;
 
 #[no_mangle]
@@ -102,12 +101,7 @@ pub fn invoke() {
         }
         "mintErc721" => {
             let (erc721, eth_acct, token_id) = source.read().unwrap();
-            sink.write(mint_erc721(
-                &address(),
-                erc721,
-                eth_acct,
-                token_id,
-            ));
+            sink.write(mint_erc721(&address(), erc721, eth_acct, token_id));
         }
         "balanceOfOep5" => {
             let (ont_acct, eth_acct, is_neovm) = source.read().unwrap();

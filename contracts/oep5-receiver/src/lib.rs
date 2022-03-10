@@ -70,7 +70,7 @@ pub fn invoke() {
             let contract = source.read().unwrap();
             sink.write(get_oep5_ids(contract));
         }
-        _ => panic!("unsupported action!"),
+        _ => panic!("unsupported action2!"),
     }
     ret(sink.bytes())
 }

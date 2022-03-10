@@ -1,5 +1,5 @@
-use crate::Address;
-use ontio_std::abi::EventBuilder;
+use ostd::abi::EventBuilder;
+use ostd::types::*;
 
 pub fn new_pending_admin_event(new_pending_admin: &Address) {
     EventBuilder::new()

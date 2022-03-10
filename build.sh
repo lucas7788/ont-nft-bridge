@@ -2,6 +2,7 @@ RUSTFLAGS="-C link-arg=-zstack-size=32768" cargo build --release --target wasm32
 cd ./target/wasm32-unknown-unknown/release
 ontio-wasm-build oep5_receiver.wasm
 ontio-wasm-build bridge.wasm
+ontio-wasm-build ontd_wrapper.wasm
 mv oep5_receiver_optimized.wasm oep5_receiver_optimized1.wasm
 cd ../../../
 

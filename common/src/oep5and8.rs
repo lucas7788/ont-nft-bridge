@@ -1,8 +1,9 @@
 use ontio_std::abi::{Decoder, Encoder, Source, VmValueBuilder, VmValueParser};
 use ontio_std::contract::{ong, ont, wasm};
 use ontio_std::macros;
+use ontio_std::prelude::Vec;
 use ontio_std::runtime;
-use ontio_std::types::{Address, U128, u128_from_neo_bytes};
+use ontio_std::types::{u128_from_neo_bytes, Address, U128};
 
 pub const ONT_CONTRACT_ADDRESS: Address = macros::base58!("AFmseVrdL9f9oyCzZefL9tG6UbvhUMqNMV");
 pub const ONG_CONTRACT_ADDRESS: Address = macros::base58!("AFmseVrdL9f9oyCzZefL9tG6UbvhfRZMHJ");
@@ -20,6 +21,20 @@ pub fn transfer_oep4(contract: &Address, from: &Address, to: &Address, amount: U
         "oep4 transfer failed"
     );
 }
+
+pub fn ontd_to_ont(contract: &Address, from: &Address, amount: U128) {
+    let mut builder = VmValueBuilder::new();
+    builder.string("ontd2ont");
+    let mut nested = builder.list();
+    nested.address(from);
+    nested.number(amount);
+    nested.finish();
+    assert!(
+        call_neovm_bool(contract, builder.bytes().as_slice()),
+        "ontd2ont failed"
+    );
+}
+
 pub fn balance_of_oep4(contract: &Address, account: &Address) -> U128 {
     if contract == &ONT_CONTRACT_ADDRESS {
         return ont::balance_of(account);
@@ -128,15 +143,21 @@ pub fn call_neovm_bytearray_num(address: &Address, param: &[u8]) -> U128 {
 
 #[track_caller]
 pub fn call_neovm_address(address: &Address, param: &[u8]) -> Address {
+    let data = call_neovm_bytearray(address, param);
+    Address::from_slice(data.as_slice())
+}
+
+#[track_caller]
+pub fn call_neovm_bytearray(address: &Address, param: &[u8]) -> Vec<u8> {
     let result = runtime::call_contract(address, param);
     let mut source = VmValueParser::new(result.as_slice());
-    source.address().unwrap().clone()
+    source.bytearray().unwrap().to_vec()
 }
 
 #[track_caller]
 pub fn call_wasm_contract<T: Encoder, R>(address: &Address, param: T) -> R
-    where
-            for<'a> R: Decoder<'a>,
+where
+    for<'a> R: Decoder<'a>,
 {
     let result = wasm::call_contract(address, param);
     let mut source = Source::new(result.as_slice());

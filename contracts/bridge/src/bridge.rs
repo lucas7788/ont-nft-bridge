@@ -1,7 +1,7 @@
-use crate::erc721and1155::*;
 use crate::events::*;
 use alloc::collections::BTreeMap;
-use common::oep5and8::{balance_of_oep5, balance_of_oep8, lock_oep5, transfer_oep8, owner_of};
+use common::erc721and1155::{balance_of_erc1155, balance_of_erc721, mint_erc1155, mint_erc721};
+use common::oep5and8::{balance_of_oep5, balance_of_oep8, lock_oep5, owner_of, transfer_oep8};
 use ostd::abi::{Decoder, Encoder, Sink};
 use ostd::database::{delete, get, put};
 use ostd::prelude::*;

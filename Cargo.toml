@@ -3,7 +3,7 @@ members = [
     "common",
     "contracts/bridge",
     "contracts/oep5-receiver",
-    "contracts/ontd-tool"
+    "contracts/ontd-wrapper"
 ]
 
 [profile.release]

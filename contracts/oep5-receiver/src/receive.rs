@@ -90,7 +90,12 @@ pub fn migrate(
     true
 }
 
-pub fn withdraw_oep5(contract: &Address, to: &Address, token_id: U128, oep5_is_neovm: bool) -> bool {
+pub fn withdraw_oep5(
+    contract: &Address,
+    to: &Address,
+    token_id: U128,
+    oep5_is_neovm: bool,
+) -> bool {
     let bridge = get_nft_bridge();
     let admin = get_admin();
     assert!(

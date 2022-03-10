@@ -18,27 +18,27 @@ mod tool;
 pub fn invoke() {
     let input = input();
     let mut source = Source::new(&input);
-    let action = source.read().unwrap();
+    let action: &[u8] = source.read().unwrap();
     let mut sink = Sink::new(12);
     match action {
-        "init" => {
+        b"init" => {
             let admin = source.read().unwrap();
             sink.write(initialize(admin))
         }
-        "getAdmin" => {
+        b"getAdmin" => {
             sink.write(get_admin());
         }
-        "setPendingAdmin" => {
+        b"setPendingAdmin" => {
             let new_admin = source.read().unwrap();
             sink.write(set_pending_admin(new_admin));
         }
-        "getPendingAdmin" => {
+        b"getPendingAdmin" => {
             sink.write(get_pending_admin());
         }
-        "acceptAdmin" => {
+        b"acceptAdmin" => {
             sink.write(accept_admin());
         }
-        "migrate" => {
+        b"migrate" => {
             let (code, vm_type, name, version, author, email, desc) = source.read().unwrap();
             let vm_type: U128 = vm_type;
             sink.write(migrate(
@@ -51,11 +51,32 @@ pub fn invoke() {
                 desc,
             ));
         }
-        "ONTdToWONT" => {
-            let (contract, to, token_id) = source.read().unwrap();
-            sink.write(ontd_to_wont(contract, to, token_id));
+        b"setBridge" => {
+            let bridge = source.read().unwrap();
+            sink.write(set_bridge(bridge));
         }
-        _ => panic!("unsupported action!"),
+        b"getBridge" => {
+            sink.write(get_bridge());
+        }
+        b"setTokenPairName" => {
+            let name = source.read().unwrap();
+            sink.write(set_token_pair_name(name));
+        }
+        b"getTokenPairName" => {
+            sink.write(get_token_pair_name());
+        }
+        b"setOntd" => {
+            let wont = source.read().unwrap();
+            sink.write(set_ontd(wont));
+        }
+        b"getOntd" => {
+            sink.write(get_ontd());
+        }
+        b"oep4ToOrc20" => {
+            let (ont_acct, eth_acct, amount) = source.read().unwrap();
+            sink.write(ontd_to_wont(ont_acct, eth_acct, amount));
+        }
+        _ => panic!("unsupported action2!"),
     }
     ret(sink.bytes())
 }
